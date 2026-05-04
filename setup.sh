@@ -61,7 +61,7 @@ echo -e "${YELLOW}[4/4] Claude Code settings${NC}"
 SETTINGS_FILE="$HOME/.claude/settings.json"
 
 if [[ -f "$SETTINGS_FILE" ]]; then
-    if grep -q "localhost:4000" "$SETTINGS_FILE" 2>/dev/null; then
+    if grep -q "localhost:11434" "$SETTINGS_FILE" 2>/dev/null; then
         echo -e "  ${GREEN}✓${NC} Already configured"
     else
         echo ""
@@ -70,7 +70,7 @@ if [[ -f "$SETTINGS_FILE" ]]; then
         echo -e '  {'
         echo -e '    "env": {'
         echo -e '      "ANTHROPIC_API_KEY": "any-key",'
-        echo -e '      "ANTHROPIC_BASE_URL": "http://localhost:4000",'
+        echo -e '      "ANTHROPIC_BASE_URL": "http://localhost:11434",'
         echo -e '      "ANTHROPIC_MODEL": "deepseek-v4-pro",'
         echo -e '      "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-v4-pro",'
         echo -e '      "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-pro",'
@@ -83,7 +83,7 @@ if [[ -f "$SETTINGS_FILE" ]]; then
     fi
 else
     echo -e "  ${YELLOW}~/.claude/settings.json not found. Create it with:${NC}"
-    echo '  mkdir -p ~/.claude && echo '"'"'{"env":{"ANTHROPIC_API_KEY":"any-key","ANTHROPIC_BASE_URL":"http://localhost:4000","ANTHROPIC_MODEL":"deepseek-v4-pro","CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS":"true"}}'"'"' > ~/.claude/settings.json'
+    echo '  mkdir -p ~/.claude && echo '"'"'{"env":{"ANTHROPIC_API_KEY":"any-key","ANTHROPIC_BASE_URL":"http://localhost:11434","ANTHROPIC_MODEL":"deepseek-v4-pro","CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS":"true"}}'"'"' > ~/.claude/settings.json'
 fi
 
 echo ""

@@ -1,0 +1,20 @@
+services:
+  proxy:
+    build: .
+    container_name: opencode-proxy
+    ports:
+      - "127.0.0.1:11434:11434"
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:11434/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

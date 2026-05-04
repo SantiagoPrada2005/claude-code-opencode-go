@@ -30,7 +30,19 @@ if not OPENCODE_API_KEY:
         "OPENCODE_API_KEY not set. Create a .env file or export the env var.\n"
         "  cp .env.example .env  # then edit .env with your key"
     )
-OPENCODE_BASE = "https://opencode.ai/zen/go/v1/chat/completions"
+
+OPENCODE_BASE = os.environ.get(
+    "OPENCODE_BASE_URL",
+    "https://opencode.ai/zen/go/v1/chat/completions"
+)
+
+PROXY_HOST = os.environ.get("PROXY_HOST", "127.0.0.1")
+PROXY_PORT = int(os.environ.get("PROXY_PORT", "11434"))
+
+AVAILABLE_MODELS = os.environ.get(
+    "AVAILABLE_MODELS",
+    "deepseek-v4-pro,deepseek-v4-flash"
+)
 
 app = FastAPI()
 
@@ -513,16 +525,24 @@ async def count_tokens(request: Request):
 
 @app.get("/v1/models")
 async def list_models():
-    """List available models. Claude Code uses this for model discovery."""
-    return {
-        "object": "list",
-        "data": [
-            {"id": "deepseek-v4-pro", "object": "model", "created": 1777847314, "owned_by": "opencode"},
-            {"id": "deepseek-v4-flash", "object": "model", "created": 1777847314, "owned_by": "opencode"},
-        ]
-    }
+    """List available models. Claude Code uses this for model discovery.
+    Configure via AVAILABLE_MODELS env var (comma-separated)."""
+    models = []
+    for name in AVAILABLE_MODELS.split(","):
+        name = name.strip()
+        if name:
+            models.append({
+                "id": name,
+                "object": "model",
+                "created": 1777847314,
+                "owned_by": "opencode"
+            })
+    return {"object": "list", "data": models}
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=4000)
+    print(f"[PROXY] Starting on {PROXY_HOST}:{PROXY_PORT}")
+    print(f"[PROXY] Upstream: {OPENCODE_BASE}")
+    print(f"[PROXY] Models: {AVAILABLE_MODELS}")
+    uvicorn.run(app, host=PROXY_HOST, port=PROXY_PORT)

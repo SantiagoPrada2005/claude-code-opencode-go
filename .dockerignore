@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+.proxy.pid
+*.log
+.git/
+.gitignore
+litellm-config.yaml
+*.sh
+README.md
+.env.example

@@ -4,3 +4,4 @@ __pycache__/
 .proxy.pid
 /tmp/
 *.log
+.docker/
