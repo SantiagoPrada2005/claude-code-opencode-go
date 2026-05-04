@@ -1,43 +1,93 @@
 # Claude Code + OpenCode Go
 
-Usa Claude Code con modelos de OpenCode Go (`deepseek-v4-pro`, `deepseek-v4-flash`, etc.) via un proxy local que traduce Anthropic Messages API → OpenAI Chat Completions.
+<div align="center">
 
-## Arquitectura
+**$10/month → Claude Code with 14 models. No Anthropic subscription needed.**
+
+[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+</div>
+
+---
+
+## What is this?
+
+Claude Code normally requires an [Anthropic subscription](https://claude.com/pricing) ($20–$200/month) and only works with Claude models. This project lets you use it with **[OpenCode Go](https://opencode.ai)** — a $10/month service that gives you access to **14 models** including:
+
+- **DeepSeek V4 Pro / Flash** — coding, reasoning, fast iteration
+- **Kimi K2.6 / K2.5** — long context (128K+ tokens)
+- **GLM 5.1 / 5** — bilingual coding (EN/ZH)
+- **Qwen 3.6 Plus / 3.5 Plus** — general purpose
+- **MiMo V2 Pro / Omni / V2.5** — multimodal
+- **MiniMax M2.7 / M2.5** — creative tasks
+
+It works by running a **tiny local proxy** that translates Claude Code's Anthropic API calls into OpenAI-compatible calls that OpenCode Go understands. Zero latency penalty, zero config changes to your workflow.
+
+## How it works
 
 ```
-Claude Code ── Anthropic API ──→ Proxy (localhost:4000) ── OpenAI API ──→ OpenCode Go
-                                    proxy-server.py                     zen/go/v1/chat/completions
+┌──────────────┐       Anthropic API        ┌─────────────────┐       OpenAI API        ┌──────────────┐
+│              │  POST /v1/messages          │                 │  POST /v1/chat/       │              │
+│  Claude Code │ ────────────────────────→   │  proxy-server   │ ────────────────────→  │  OpenCode Go │
+│              │                             │  (localhost:    │                        │              │
+│  $0 (free)   │  ← Anthropic SSE response   │    port 4000)   │  ← OpenAI response     │  $10/month   │
+└──────────────┘                             └─────────────────┘                        └──────────────┘
 ```
 
-## Requisitos
+The proxy handles:
+- **Message format** — Anthropic content blocks ↔ OpenAI messages
+- **Tool use** — `name` + `input_schema` ↔ `function.name` + `parameters`
+- **Thinking/reasoning** — `thinking` blocks ↔ `reasoning_content`
+- **Streaming** — OpenAI SSE ↔ Anthropic SSE events
+- **Multi-turn** — tool calls → tool results → final answer
 
-- Python 3.9+
-- Claude Code instalado
-- API key de OpenCode Go (suscríbete en [opencode.ai](https://opencode.ai))
-
-## Instalación (1 minuto)
+## Quick Start
 
 ```bash
-# 1. Clonar este repo
-git clone <repo-url> ~/claude-code-opencode-go
-
-# 2. Instalar dependencias Python
-pip3 install fastapi httpx uvicorn --user
-
-# 3. Setear tu API key de OpenCode Go
-export OPENCODE_API_KEY="sk-..."
-
-# 4. Iniciar el proxy
-nohup python3 ~/claude-code-opencode-go/proxy-server.py > /tmp/proxy.log 2>&1 &
-
-# 5. Verificar que corre
-curl http://localhost:4000/health
-# → {"status":"ok"}
+git clone https://github.com/SantiagoPrada2005/claude-code-opencode-go.git
+cd claude-code-opencode-go
+./setup.sh      # install deps, set API key, print config
+./start.sh      # launch proxy in background
 ```
 
-## Configurar Claude Code
+Then update your `~/.claude/settings.json` with the block printed by `setup.sh`, and open `claude`.
 
-Agregar al `~/.claude/settings.json`:
+That's it.
+
+## Detailed Setup
+
+### 1. Prerequisites
+
+- **Python 3.9+**
+- **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** installed
+- **[OpenCode Go API key](https://opencode.ai/auth)** ($10/month, $5 first month)
+
+### 2. Configure
+
+```bash
+# Clone and run setup (interactive — asks for your API key)
+git clone https://github.com/SantiagoPrada2005/claude-code-opencode-go.git ~/claude-code-opencode-go
+cd ~/claude-code-opencode-go
+./setup.sh
+```
+
+`setup.sh` will:
+- Check Python is available
+- Install `fastapi`, `httpx`, `uvicorn` via pip
+- Prompt for your OpenCode Go API key → saves to `.env`
+- Print the JSON block to add to your `settings.json`
+
+Alternatively, manual setup:
+
+```bash
+pip3 install fastapi httpx uvicorn --user
+cp .env.example .env   # then edit .env with your key
+```
+
+### 3. Add to Claude Code settings
+
+Merge this into `~/.claude/settings.json` (create the file if it doesn't exist):
 
 ```json
 {
@@ -54,61 +104,79 @@ Agregar al `~/.claude/settings.json`:
 }
 ```
 
-Abrir `claude` en cualquier proyecto y listo.
-
-## Endpoints del proxy
-
-| Endpoint | Uso |
-|----------|-----|
-| `POST /v1/messages` | Anthropic Messages API (chat, tools, streaming) |
-| `POST /v1/messages/count_tokens` | Conteo de tokens |
-| `GET /v1/models` | Lista de modelos disponibles |
-| `GET /health` | Health check |
-
-## Modelos disponibles en OpenCode Go
-
-```
-deepseek-v4-pro   deepseek-v4-flash
-kimi-k2.6         kimi-k2.5
-glm-5.1           glm-5
-qwen3.6-plus      qwen3.5-plus
-mimo-v2-pro       mimo-v2-omni
-mimo-v2.5-pro     mimo-v2.5
-minimax-m2.7      minimax-m2.5
-```
-
-Para usar otro modelo, agrégalo al `list_models()` en `proxy-server.py` y actualiza `settings.json`.
-
-## Comandos útiles
+### 4. Start
 
 ```bash
-# Iniciar proxy
-export OPENCODE_API_KEY="sk-..."
-nohup python3 ~/claude-code-opencode-go/proxy-server.py > /tmp/proxy.log 2>&1 &
-
-# Detener proxy
-pkill -f proxy-server
-
-# Ver logs
-tail -f /tmp/proxy.log
+./start.sh   # Starts proxy on localhost:4000 (background)
+claude       # Start coding
 ```
 
-## Revertir a DeepSeek directo
+## Daily Commands
+
+| Command | What it does |
+|---------|-------------|
+| `./start.sh` | Start the proxy in background |
+| `./stop.sh` | Stop the proxy |
+| `tail -f /tmp/opencode-proxy.log` | Watch live proxy logs |
+| `curl http://localhost:4000/health` | Check if proxy is running |
+
+## Available Models
+
+The proxy exposes `deepseek-v4-pro` and `deepseek-v4-flash` by default. OpenCode Go also supports:
+
+```
+kimi-k2.6      kimi-k2.5      glm-5.1        glm-5
+qwen3.6-plus   qwen3.5-plus   mimo-v2-pro    mimo-v2-omni
+mimo-v2.5-pro  mimo-v2.5      minimax-m2.7   minimax-m2.5
+```
+
+To add more models, edit `list_models()` in `proxy-server.py` and add the corresponding env vars in `settings.json`.
+
+## API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/v1/messages` | POST | Anthropic Messages API (chat, tools, streaming) |
+| `/v1/messages/count_tokens` | POST | Token counting (approximate) |
+| `/v1/models` | GET | Model discovery |
+| `/health` | GET | Health check |
+
+## Switching Back to DeepSeek Direct
+
+Replace your `settings.json` env block:
 
 ```json
-"ANTHROPIC_API_KEY": "<tu-deepseek-api-key>",
+"ANTHROPIC_API_KEY": "<your-deepseek-key>",
 "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic"
 ```
 
-Quitar `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS`.
+Remove `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS`.
 
-## Limitaciones
+## Why not just use DeepSeek directly?
 
-- **Token counting aproximado** (word-based ×2). Precisión suficiente para gestión de contexto.
-- **DeepSeek v4 pro thinking mode** puede consumir tokens en razonamiento con `max_tokens` bajo.
-- **Sin autenticación** en el proxy — solo exponer en localhost.
-- **Dependencias mínimas**: fastapi, httpx, uvicorn.
+DeepSeek's endpoint works but with limited model variety. OpenCode Go gives you 14 models from 7 providers for $10/month. Switch between them based on your task — fast iteration with Flash, heavy reasoning with Pro, long context with Kimi.
 
-## Licencia
+## Known Limitations
 
-MIT
+- **Token counting is approximate** — word-based estimation (×2 factor). Good enough for context management.
+- **DeepSeek V4 Pro thinking mode** — can exhaust `max_tokens` on reasoning if set too low. Use Flash for fast tasks.
+- **No auth on proxy** — no API key validation. Only expose on localhost.
+- **Minimal dependencies** — only `fastapi`, `httpx`, `uvicorn`. No database, no cloud services.
+
+## Files
+
+```
+claude-code-opencode-go/
+├── proxy-server.py      # The proxy — Anthropic ↔ OpenAI translation
+├── setup.sh             # Interactive setup (install deps, configure .env)
+├── start.sh             # Start proxy as background daemon
+├── stop.sh              # Stop the proxy
+├── .env.example         # Template for your API key
+├── litellm-config.yaml  # Backup config (LiteLLM explored, not used)
+├── .gitignore
+└── README.md
+```
+
+## License
+
+MIT — use it, fork it, ship it.
