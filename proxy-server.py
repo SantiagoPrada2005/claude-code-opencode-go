@@ -5,13 +5,31 @@ Bridges Claude Code (Anthropic format) to OpenCode Go (OpenAI format).
 """
 import json
 import os
+from pathlib import Path
+
 import httpx
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse
 
+# Load .env file if present
+_ENV_FILE = Path(__file__).resolve().parent / ".env"
+if _ENV_FILE.exists():
+    with open(_ENV_FILE) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, val = line.partition("=")
+                key = key.strip()
+                val = val.strip().strip('"').strip("'")
+                if key not in os.environ:
+                    os.environ[key] = val
+
 OPENCODE_API_KEY = os.environ.get("OPENCODE_API_KEY")
 if not OPENCODE_API_KEY:
-    raise RuntimeError("OPENCODE_API_KEY environment variable not set")
+    raise RuntimeError(
+        "OPENCODE_API_KEY not set. Create a .env file or export the env var.\n"
+        "  cp .env.example .env  # then edit .env with your key"
+    )
 OPENCODE_BASE = "https://opencode.ai/zen/go/v1/chat/completions"
 
 app = FastAPI()

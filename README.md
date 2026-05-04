@@ -96,7 +96,7 @@ tail -f /tmp/proxy.log
 ## Revertir a DeepSeek directo
 
 ```json
-"ANTHROPIC_API_KEY": "sk-87c2912b14ce4fc292b460760ab1d149",
+"ANTHROPIC_API_KEY": "<tu-deepseek-api-key>",
 "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic"
 ```
 
